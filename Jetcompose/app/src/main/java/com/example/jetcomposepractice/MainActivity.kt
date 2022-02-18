@@ -18,14 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.launch
-
-import androidx.compose.runtime.rememberCoroutineScope
-
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
@@ -34,13 +27,11 @@ import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import kotlinx.coroutines.launch
 
+
 public lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
 public lateinit var objectDetector: ObjectDetector
 
 class MainActivity : ComponentActivity() {
-
-    private lateinit var objectDetector: ObjectDetector
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -50,7 +41,7 @@ class MainActivity : ComponentActivity() {
 //        }, ContextCompat.getMainExecutor(this))
 //
 //        val localModel = LocalModel.Builder()
-//            .setAbsoluteFilePath("object_detection.tflite")
+//            .setAbsoluteFilePath("lite-model_object_detection_mobile_object_labeler_v1_1.tflite")
 //            .build()
 //        val customObjectDetectorOptions = CustomObjectDetectorOptions.Builder(localModel)
 //            .setDetectorMode(CustomObjectDetectorOptions.STREAM_MODE)
@@ -63,53 +54,53 @@ class MainActivity : ComponentActivity() {
             CameraPreview(Modifier.fillMaxSize());
         }
     }
-    @SuppressLint("UnsafeOptInUsageError")
-    private fun bindPreview(cameraProvider: ProcessCameraProvider) {
-        val preview = Preview.Builder().build()
-        val cameraSelector = CameraSelector.Builder()
-            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-            .build()
-        val previewView = PreviewView(this).apply {
-            this.scaleType = scaleType
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-        preview.setSurfaceProvider(previewView.surfaceProvider)
-
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setTargetResolution(Size(1280, 720))
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this)) { imageProxy ->
-            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-
-            val image = imageProxy.image
-
-            if (image != null) {
-                val processImage = InputImage.fromMediaImage(image, rotationDegrees)
-                objectDetector
-                    .process(processImage)
-                    .addOnSuccessListener { objects ->
-                        for (i in objects) {
-                            Log.v("MainActivity", "Object - ${i.labels.firstOrNull()?.text ?: "Undefined"}")
-                        }
-                        imageProxy.close()
-                    }.addOnFailureListener {
-                        Log.v("MainActivity", "Error - ${it.message}")
-                        imageProxy.close()
-                    }
-            }
-        }
-        cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, imageAnalysis, preview)
-
-    }
+//    @SuppressLint("UnsafeOptInUsageError")
+//    private fun bindPreview(cameraProvider: ProcessCameraProvider) {
+//        val preview = Preview.Builder().build()
+//        val cameraSelector = CameraSelector.Builder()
+//            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//            .build()
+//        val previewView = PreviewView(this).apply {
+//            this.scaleType = scaleType
+//            layoutParams = ViewGroup.LayoutParams(
+//                ViewGroup.LayoutParams.MATCH_PARENT,
+//                ViewGroup.LayoutParams.MATCH_PARENT
+//            )
+//        }
+//        preview.setSurfaceProvider(previewView.surfaceProvider)
+//
+//        val imageAnalysis = ImageAnalysis.Builder()
+//            .setTargetResolution(Size(1280, 720))
+//            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//            .build()
+//        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this)) { imageProxy ->
+//            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+//
+//            val image = imageProxy.image
+//
+//            if (image != null) {
+//                val processImage = InputImage.fromMediaImage(image, rotationDegrees)
+//                objectDetector
+//                    .process(processImage)
+//                    .addOnSuccessListener { objects ->
+//                        for (i in objects) {
+//                            Log.v("MainActivity", "Object - ${i.labels.firstOrNull()?.text ?: "Undefined"}")
+//                        }
+//                        imageProxy.close()
+//                    }.addOnFailureListener {
+//                        Log.v("MainActivity", "Error - ${it.message}")
+//                        imageProxy.close()
+//                    }
+//            }
+//        }
+//        cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, imageAnalysis, preview)
+//
+//    }
 
 }
 
 
-@SuppressLint("UnsafeOptInUsageError")
+@SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
@@ -130,18 +121,19 @@ fun CameraPreview(
             }
 
             val localModel = LocalModel.Builder()
-                .setAbsoluteFilePath("object_detection.tflite")
+                .setAbsoluteFilePath("lite-model_object_detection_mobile_object_labeler_v1_1.tflite")
                 .build()
             val customObjectDetectorOptions = CustomObjectDetectorOptions.Builder(localModel)
                 .setDetectorMode(CustomObjectDetectorOptions.STREAM_MODE)
                 .enableClassification()
                 .setClassificationConfidenceThreshold(0.5f)
-                .setMaxPerObjectLabelCount(3)
+                .setMaxPerObjectLabelCount(1)
                 .build()
             objectDetector = ObjectDetection.getClient(customObjectDetectorOptions)
 
             val imageAnalysis = ImageAnalysis.Builder()
-                .setTargetResolution(Size(1280, 720))
+                .setTargetResolution(Size(224, 224))
+                .setMaxResolution(Size(224, 224))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
             imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
@@ -150,6 +142,8 @@ fun CameraPreview(
                 val image = imageProxy.image
 
                 if (image != null) {
+
+                    Log.v("MainActivity", "Resolution - ${image.height} x ${image.width}")
                     val processImage = InputImage.fromMediaImage(image, rotationDegrees)
                     objectDetector
                         .process(processImage)
@@ -167,10 +161,14 @@ fun CameraPreview(
 
             // Preview
             val previewUseCase = Preview.Builder()
+
+                .setTargetResolution(Size(224, 224))
+                .setMaxResolution(Size(224, 224))
                 .build()
                 .also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
+
 
             coroutineScope.launch {
                 val cameraProvider = cameraProviderFuture.get()
@@ -179,7 +177,7 @@ fun CameraPreview(
                     cameraProvider.unbindAll()
 
                     cameraProvider.bindToLifecycle(
-                        lifecycleOwner, cameraSelector, previewUseCase
+                        lifecycleOwner, cameraSelector, previewUseCase, imageAnalysis
                     )
                 } catch (ex: Exception) {
                     Log.e("CameraPreview", "Use case binding failed", ex)
